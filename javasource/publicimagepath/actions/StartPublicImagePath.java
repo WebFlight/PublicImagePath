@@ -13,10 +13,11 @@ import java.util.List;
 import com.mendix.core.Core;
 import com.mendix.systemwideinterfaces.core.IContext;
 import com.mendix.webui.CustomJavaAction;
-import publicimagepath.entities.ImageServiceDefinitionEntity;
+import publicimagepath.entities.MendixObjectEntity;
+import publicimagepath.helpers.ImageServiceDefinitionMatcher;
+import publicimagepath.helpers.ImageServiceDefinitionParser;
 import publicimagepath.proxies.ImageServiceDefinition;
-import publicimagepath.repositories.ImageServiceDefinitionRepository;
-import publicimagepath.repositories.MendixImageRepository;
+import publicimagepath.repositories.MendixObjectRepository;
 import publicimagepath.usecases.PublicImagePathHandler;
 import publicimagepath.usecases.PublicImagePathLoader;
 
@@ -31,12 +32,15 @@ public class StartPublicImagePath extends CustomJavaAction<java.lang.Boolean>
 	public java.lang.Boolean executeAction() throws Exception
 	{
 		// BEGIN USER CODE
-		MendixImageRepository mendixImageRepository = new MendixImageRepository(getContext());
-		ImageServiceDefinitionRepository imageServiceDefinitionRepository = new ImageServiceDefinitionRepository(getContext());
-		ImageServiceDefinitionEntity imageServiceDefinitionEntity = new ImageServiceDefinitionEntity(getContext());
-		PublicImagePathLoader publicImagePathLoader = new PublicImagePathLoader(imageServiceDefinitionRepository);
+		MendixObjectRepository mendixObjectRepository = new MendixObjectRepository(getContext());
+		MendixObjectEntity mendixObjectEntity = new MendixObjectEntity(getContext());
+		PublicImagePathLoader publicImagePathLoader = new PublicImagePathLoader(mendixObjectRepository);
+		ImageServiceDefinitionMatcher imageServiceDefinitionMatcher = new ImageServiceDefinitionMatcher(mendixObjectEntity);
+		ImageServiceDefinitionParser imageServiceDefinitionParser = new ImageServiceDefinitionParser(mendixObjectEntity);
+		
+		
 		List<ImageServiceDefinition> imageServiceDefinitions = publicImagePathLoader.load();
-		Core.addRequestHandler("images/", new PublicImagePathHandler(imageServiceDefinitions, imageServiceDefinitionEntity, mendixImageRepository));
+		Core.addRequestHandler("images/", new PublicImagePathHandler(imageServiceDefinitions, mendixObjectEntity, mendixObjectRepository, imageServiceDefinitionMatcher, imageServiceDefinitionParser));
 		return true;
 		// END USER CODE
 	}

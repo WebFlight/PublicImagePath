@@ -1,5 +1,7 @@
 package publicimagepath.entities;
 
+import java.util.Map;
+
 //import java.io.ByteArrayInputStream;
 //import java.io.InputStream;
 //import java.util.List;
@@ -9,14 +11,15 @@ package publicimagepath.entities;
 import com.mendix.systemwideinterfaces.core.IContext;
 //import com.mendix.systemwideinterfaces.core.IMendixObject;
 import com.mendix.systemwideinterfaces.core.IMendixObject;
+import com.mendix.systemwideinterfaces.core.IMendixObjectMember;
 
 import publicimagepath.proxies.ImageServiceDefinition;
 
-public class ImageServiceDefinitionEntity {
+public class MendixObjectEntity {
 	
 	private IContext context;
 	
-	public ImageServiceDefinitionEntity(IContext context) {
+	public MendixObjectEntity(IContext context) {
 		this.context = context;
 	}
 	
@@ -32,13 +35,12 @@ public class ImageServiceDefinitionEntity {
 		object.setValue(context, member, value);
 	}
 	
-//	public InputStream getImage() throws CoreException {
-//		List<IMendixObject> images = Core.retrieveXPathQuery(context, "//PublicImagePath.ImageServiceDefinition");
-//		InputStream inputStream = new ByteArrayInputStream(new byte[0]);
-//		for (IMendixObject image : images) {
-//			inputStream = Core.getImage(context, image, false);			
-//		}
-//		return inputStream;
-//	}
-
+	public Map<String, ? extends IMendixObjectMember<?>> getMembers(IMendixObject object) {
+		return object.getMembers(context);
+	}
+	
+	@SuppressWarnings("unchecked")
+	public <T> void setValue(IMendixObjectMember<T> member, String value) {
+		member.setValue(context, (T) value);
+	}
 }
