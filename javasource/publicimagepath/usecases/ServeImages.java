@@ -3,105 +3,100 @@ package publicimagepath.usecases;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.apache.commons.io.IOUtils;
 
-import com.mendix.core.Core;
 import com.mendix.core.CoreException;
 import com.mendix.m2ee.api.IMxRuntimeRequest;
 import com.mendix.m2ee.api.IMxRuntimeResponse;
-import com.mendix.systemwideinterfaces.core.IActionManager;
 import com.mendix.systemwideinterfaces.core.IDataType;
 import com.mendix.systemwideinterfaces.core.IMendixObject;
-import com.mendix.systemwideinterfaces.core.meta.IMetaPrimitive;
+import com.mendix.systemwideinterfaces.core.IMendixObjectMember;
 
-import publicimagepath.entities.ImageServiceDefinitionEntity;
+import publicimagepath.entities.MendixObjectEntity;
+import publicimagepath.helpers.ImageServiceDefinitionMatcher;
+import publicimagepath.helpers.ImageServiceDefinitionParser;
 import publicimagepath.proxies.ImageServiceDefinition;
-import publicimagepath.repositories.MendixImageRepository;
+import publicimagepath.repositories.MendixObjectRepository;
 
 public class ServeImages {
 
 	private IMxRuntimeRequest request;
 	private IMxRuntimeResponse response;
-	private String s;
 	private List<ImageServiceDefinition> imageServiceDefinitions;
-	private ImageServiceDefinitionEntity imageServiceDefinitionEntity;
-	private MendixImageRepository mendixImageRepository;
+	private MendixObjectEntity mendixObjectEntity;
+	private MendixObjectRepository mendixObjectRepository;
+	private ImageServiceDefinitionMatcher imageServiceDefinitionMatcher;
+	private ImageServiceDefinitionParser imageServiceDefinitionParser;
 	private Pattern imagesPattern = Pattern.compile("^/images");
 	private Pattern slashPattern = Pattern.compile("^/|/$"); 
-	private Pattern urlToRe = Pattern.compile("\\{[a-zA-Z0-9_\\.-]*\\}");
-	private Map<String, String> parameterMap = new HashMap<>();
 	
 	public ServeImages(IMxRuntimeRequest request, IMxRuntimeResponse response, String s,
-			List<ImageServiceDefinition> imageServiceDefinitions, ImageServiceDefinitionEntity imageServiceDefinitionEntity, MendixImageRepository mendixImageRepository) {
+			List<ImageServiceDefinition> imageServiceDefinitions, MendixObjectEntity imageServiceDefinitionEntity, MendixObjectRepository mendixObjectRepository,
+			ImageServiceDefinitionMatcher imageServiceDefinitionMatcher, ImageServiceDefinitionParser imageServiceDefinitionParser) {
 		this.request = request;
 		this.response = response;
-		this.s = s;
 		this.imageServiceDefinitions = imageServiceDefinitions;
-		this.imageServiceDefinitionEntity = imageServiceDefinitionEntity;
-		this.mendixImageRepository = mendixImageRepository;
+		this.mendixObjectEntity = imageServiceDefinitionEntity;
+		this.mendixObjectRepository = mendixObjectRepository;
+		this.imageServiceDefinitionMatcher = imageServiceDefinitionMatcher;
+		this.imageServiceDefinitionParser = imageServiceDefinitionParser;
 	}
 	
-	public void serve() throws CoreException, IOException {
+	public void serve() throws IOException, CoreException {
 		
 		String requestPath = request.getHttpServletRequest().getRequestURI();
 		requestPath = imagesPattern.matcher(requestPath).replaceAll("");
 		requestPath = slashPattern.matcher(requestPath).replaceAll("");
 		
-		// Match request with definitions
-		for (ImageServiceDefinition imageServiceDefinition : imageServiceDefinitions) {
-			String microflowName = imageServiceDefinitionEntity.getMicroflowName(imageServiceDefinition);
-			String path = imageServiceDefinitionEntity.getPath(imageServiceDefinition);
-			path = slashPattern.matcher(path).replaceAll("");
-			
-			String imageDefinitionRegex = urlToRe.matcher(path).replaceAll("(\\[a-zA-Z0-9_\\.-\\]*)");
-			String paramRegex = urlToRe.matcher(path).replaceAll("(\\\\{[a-zA-Z0-9_\\.-]*\\\\})");
-			Pattern pattern = Pattern.compile(imageDefinitionRegex);
-			Pattern paramPattern = Pattern.compile(paramRegex);
-			if (pattern.matcher(requestPath).matches()) {
-				// Extract the key
-				// Retrieve the source entity using the key
-				Matcher parMatcher  = paramPattern.matcher(path);
-				Matcher valueMatcher = pattern.matcher(requestPath);
-		        while (parMatcher.find() && valueMatcher.find()) {
-		            for (int i = 1; i <= parMatcher.groupCount(); i++) {
-		                String parName = parMatcher.group(i).replace("{", "").replace("}", "");
-		                String value = valueMatcher.group(i);
-		                parameterMap.put(parName, value);
-		            }
-		        }
-			}
-			
-			if(Core.getMicroflowNames().contains(microflowName)) {
-				Map<String, IDataType> mfInputParameters = Core.getInputParameters(microflowName);
-				Iterator<IDataType> it = mfInputParameters.values().iterator();
-				while(it.hasNext()) {
-					IDataType dataType = it.next();
-					if(dataType.isMendixObject()) {
-						Collection<? extends IMetaPrimitive> primitives = Core.getMetaObject(dataType.getObjectType()).getMetaPrimitives();
-						IMendixObject inputObject = mendixImageRepository.instantiate(dataType.getObjectType());
-			
-						for (IMetaPrimitive primitive : primitives) {
-							imageServiceDefinitionEntity.setValue(inputObject, primitive.getName(), parameterMap.get(primitive.getName()));
-							System.out.println("Member " + primitive.getName() + " Value: " + parameterMap.get(primitive.getName()));
-						}
-						
-						IMendixObject imageObject = mendixImageRepository.execute(microflowName, inputObject);
-						InputStream imageInputStream = mendixImageRepository.getImage(imageObject);
-						OutputStream outputStream = response.getOutputStream();
-						IOUtils.copy(imageInputStream, outputStream);
-						imageInputStream.close();
-						outputStream.close();
+		ImageServiceDefinition imageServiceDefinition;
+		Map<String, String> parameterMap = new HashMap<>();
+		String microflowName = new String();
+		try {
+			imageServiceDefinition = imageServiceDefinitionMatcher.find(imageServiceDefinitions, requestPath);
+			parameterMap = imageServiceDefinitionParser.getParameters(imageServiceDefinition, requestPath);
+			microflowName = mendixObjectEntity.getMicroflowName(imageServiceDefinition);
+		} catch (Exception e) {
+			response.getHttpServletResponse().setStatus(404);
+			response.getOutputStream().write(new String("404 NOT FOUND: URL does not match with ImageServiceDefinition.").getBytes());
+			response.getOutputStream().close();
+			return;
+		}
+
+        
+        if(mendixObjectRepository.microflowExists(microflowName)) {
+			Map<String, IDataType> mfInputParameters = mendixObjectRepository.getMicroflowInputParameters(microflowName);
+			Iterator<IDataType> it = mfInputParameters.values().iterator();
+			while(it.hasNext()) {
+				IDataType dataType = it.next();
+				if(dataType.isMendixObject()) {
+					IMendixObject inputObject = mendixObjectRepository.instantiate(dataType.getObjectType());
+					Map<String, ? extends IMendixObjectMember<?>> inputObjectMembers = mendixObjectEntity.getMembers(inputObject);
+					for(String key : inputObjectMembers.keySet()) {
+						IMendixObjectMember<?> member = inputObjectMembers.get(key);
+						mendixObjectEntity.setValue(inputObject, member.getName(), parameterMap.get(member.getName()));
 					}
+					
+					IMendixObject imageObject = mendixObjectRepository.execute(microflowName, inputObject);
+					if(imageObject == null) {
+						response.getHttpServletResponse().setStatus(404);
+						response.getOutputStream().write(new String("404 NOT FOUND: Image not found.").getBytes());
+						response.getOutputStream().close();
+						return;
+					}
+					
+					InputStream imageInputStream = mendixObjectRepository.getImage(imageObject);
+					OutputStream outputStream = response.getOutputStream();
+					IOUtils.copy(imageInputStream, outputStream);
+					imageInputStream.close();
+					outputStream.close();
 				}
 			}
-		}
+		}	
 	}
 }

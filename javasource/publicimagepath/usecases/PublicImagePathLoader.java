@@ -5,17 +5,17 @@ import java.util.List;
 import com.mendix.core.CoreException;
 
 import publicimagepath.proxies.ImageServiceDefinition;
-import publicimagepath.repositories.ImageServiceDefinitionRepository;
+import publicimagepath.repositories.MendixObjectRepository;
 
 public class PublicImagePathLoader {
 
-	private ImageServiceDefinitionRepository imageServiceDefinitionRepository;	
+	private MendixObjectRepository mendixObjectRepository;	
 	
-	public PublicImagePathLoader(ImageServiceDefinitionRepository imageServiceDefinitionRepository) {
-		this.imageServiceDefinitionRepository = imageServiceDefinitionRepository;
+	public PublicImagePathLoader(MendixObjectRepository mendixObjectRepository) {
+		this.mendixObjectRepository = mendixObjectRepository;
 	}
 
 	public List<ImageServiceDefinition> load() throws CoreException {
-		return imageServiceDefinitionRepository.getImageServiceDefinitions();
+		return mendixObjectRepository.getImageServiceDefinitions();
 	}
 }
