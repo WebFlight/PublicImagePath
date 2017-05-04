@@ -40,6 +40,7 @@ public class ImageServiceDefinitionMatcherTest {
 			
 		}
 		assertSame(imageServiceDefinition, returnedImageServiceDefinition);
+		verify(mendixObjectEntity, times(1)).getPath(imageServiceDefinition);
 	}
 	
 	@Test(expected = Exception.class)
@@ -51,6 +52,7 @@ public class ImageServiceDefinitionMatcherTest {
 		imageServiceDefinitions.add(imageServiceDefinition);
 		ImageServiceDefinitionMatcher imageServiceDefinitionMatcher = new ImageServiceDefinitionMatcher(mendixObjectEntity);
 		imageServiceDefinitionMatcher.find(imageServiceDefinitions, requestPath);
+		verify(mendixObjectEntity, times(1)).getPath(imageServiceDefinition);
 	}
 
 }
