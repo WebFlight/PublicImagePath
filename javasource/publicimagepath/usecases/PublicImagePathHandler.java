@@ -33,8 +33,7 @@ public class PublicImagePathHandler extends RequestHandler{
 	protected void processRequest(IMxRuntimeRequest request, IMxRuntimeResponse response, String path) throws Exception {
 		ServeImages serveImages = new ServeImages(
 				request, 
-				response, 
-				path, 
+				response,  
 				imageServiceDefinitions, 
 				mendixObjectEntity, 
 				mendixObjectRepository,

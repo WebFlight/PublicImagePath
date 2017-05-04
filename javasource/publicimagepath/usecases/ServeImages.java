@@ -51,13 +51,13 @@ public class ServeImages {
 	private Pattern imagesPattern = Pattern.compile("^/images");
 	private Pattern slashPattern = Pattern.compile("^/|/$"); 
 
-	public ServeImages(IMxRuntimeRequest request, IMxRuntimeResponse response, String s,
-			List<ImageServiceDefinition> imageServiceDefinitions, MendixObjectEntity imageServiceDefinitionEntity, MendixObjectRepository mendixObjectRepository,
+	public ServeImages(IMxRuntimeRequest request, IMxRuntimeResponse response,
+			List<ImageServiceDefinition> imageServiceDefinitions, MendixObjectEntity mendixObjectEntity, MendixObjectRepository mendixObjectRepository,
 			ImageServiceDefinitionMatcher imageServiceDefinitionMatcher, ImageServiceDefinitionParser imageServiceDefinitionParser) {
 		this.request = request;
 		this.response = response;
 		this.imageServiceDefinitions = imageServiceDefinitions;
-		this.mendixObjectEntity = imageServiceDefinitionEntity;
+		this.mendixObjectEntity = mendixObjectEntity;
 		this.mendixObjectRepository = mendixObjectRepository;
 		this.imageServiceDefinitionMatcher = imageServiceDefinitionMatcher;
 		this.imageServiceDefinitionParser = imageServiceDefinitionParser;
