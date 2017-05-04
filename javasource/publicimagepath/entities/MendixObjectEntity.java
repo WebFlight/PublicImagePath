@@ -1,20 +1,16 @@
 package publicimagepath.entities;
 
+import java.util.Collection;
 import java.util.Date;
 import java.util.Map;
 
 import com.mendix.core.CoreException;
 
-//import java.io.ByteArrayInputStream;
-//import java.io.InputStream;
-//import java.util.List;
-
-//import com.mendix.core.Core;
-//import com.mendix.core.CoreException;
 import com.mendix.systemwideinterfaces.core.IContext;
-//import com.mendix.systemwideinterfaces.core.IMendixObject;
 import com.mendix.systemwideinterfaces.core.IMendixObject;
 import com.mendix.systemwideinterfaces.core.IMendixObjectMember;
+import com.mendix.systemwideinterfaces.core.meta.IMetaObject;
+import com.mendix.systemwideinterfaces.core.meta.IMetaPrimitive;
 
 import publicimagepath.proxies.ImageServiceDefinition;
 
@@ -49,5 +45,9 @@ public class MendixObjectEntity {
 	
 	public Date getChangedDate(IMendixObject object) throws CoreException {
 		return object.getChangedDate(context);
+	}
+	
+	public Collection<? extends IMetaPrimitive> getMetaPrimitives (IMetaObject metaObject) {
+		return metaObject.getMetaPrimitives();
 	}
 }

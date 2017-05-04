@@ -11,6 +11,7 @@ import com.mendix.core.CoreException;
 import com.mendix.systemwideinterfaces.core.IContext;
 import com.mendix.systemwideinterfaces.core.IDataType;
 import com.mendix.systemwideinterfaces.core.IMendixObject;
+import com.mendix.systemwideinterfaces.core.meta.IMetaObject;
 
 import publicimagepath.proxies.ImageServiceDefinition;
 
@@ -56,5 +57,9 @@ public class MendixObjectRepository {
 	
 	public Map<String, IDataType> getMicroflowInputParameters(String microflowName) {
 		return Core.getInputParameters(microflowName);
+	}
+	
+	public IMetaObject getMetaObject (String objectName) {
+		return Core.getMetaObject(objectName);
 	}
 }

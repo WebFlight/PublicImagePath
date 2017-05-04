@@ -1,12 +1,19 @@
 package publicimagepath.usecases;
 
+import java.util.Collection;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import com.mendix.core.CoreException;
 import com.mendix.logging.ILogNode;
 import com.mendix.systemwideinterfaces.core.IDataType;
+import com.mendix.systemwideinterfaces.core.meta.IMetaObject;
+import com.mendix.systemwideinterfaces.core.meta.IMetaPrimitive;
 
 import publicimagepath.entities.MendixObjectEntity;
 import publicimagepath.proxies.ImageServiceDefinition;
@@ -17,6 +24,7 @@ public class PublicImagePathLoader {
 	private MendixObjectRepository mendixObjectRepository;
 	private MendixObjectEntity mendixObjectEntity;
 	private ILogNode logger;
+	private Pattern parametersInPath = Pattern.compile("\\{[a-zA-Z0-9_\\.-]*\\}");
 	
 	public PublicImagePathLoader(MendixObjectRepository mendixObjectRepository, MendixObjectEntity mendixObjectEntity, ILogNode logger) {
 		this.mendixObjectRepository = mendixObjectRepository;
@@ -29,15 +37,16 @@ public class PublicImagePathLoader {
 	}
 	
 	public boolean validate(List<ImageServiceDefinition> imageServiceDefinitions) {
-		boolean validation = true;
+		boolean valid = true;
 		for(ImageServiceDefinition imageServiceDefinition : imageServiceDefinitions) {
-			validation = 
-					validation &&
+			valid = 
+					valid &&
 					checkMicroflowExists(imageServiceDefinition) &&
 					checkPathExists(imageServiceDefinition) &&
-					checkMicroflowInputs(imageServiceDefinition);
+					checkMicroflowInputs(imageServiceDefinition) &&
+					checkPathVariables(imageServiceDefinition);
 		}
-		return validation;
+		return valid;
 	}
 	
 	private boolean checkMicroflowExists (ImageServiceDefinition imageServiceDefinition) {
@@ -76,5 +85,39 @@ public class PublicImagePathLoader {
 			}
 		}
 		return true;
+	}
+	
+	private boolean checkPathVariables (ImageServiceDefinition imageServiceDefinition) {
+		String microflowName = mendixObjectEntity.getMicroflowName(imageServiceDefinition);
+		Map<String, IDataType> microflowInputParameters = mendixObjectRepository.getMicroflowInputParameters(microflowName);
+		Iterator<IDataType> it = microflowInputParameters.values().iterator();
+		Set<String> microflowInputMembers = new HashSet<>();
+		
+		while(it.hasNext()) {
+			IDataType dataType = it.next();
+			if(dataType.isMendixObject()) {
+				IMetaObject metaObject = mendixObjectRepository.getMetaObject(dataType.getObjectType());
+				Collection<? extends IMetaPrimitive> primitives = mendixObjectEntity.getMetaPrimitives(metaObject);
+				for (IMetaPrimitive primitive : primitives) {
+					microflowInputMembers.add(primitive.getName());
+				}
+			}
+		}
+		
+		String path = mendixObjectEntity.getPath(imageServiceDefinition);
+		String paramRegex = parametersInPath.matcher(path).replaceAll("(\\\\{[a-zA-Z0-9_\\.-]*\\\\})");
+		Pattern paramPattern = Pattern.compile(paramRegex);
+		Matcher parMatcher  = paramPattern.matcher(path);
+		parMatcher.find();
+		boolean valid = true;
+		for (int i = 1; i <= parMatcher.groupCount(); i++) {
+            String parName = parMatcher.group(i).replace("{", "").replace("}", "");
+            boolean parNameFound = microflowInputMembers.contains(parName);
+            if (parNameFound == false) {
+            	logger.error("Path variable " + parName + " not defined in input object of microflow " + microflowName + ".");
+            }
+            valid = valid && parNameFound;
+        }
+		return valid;
 	}
 }
