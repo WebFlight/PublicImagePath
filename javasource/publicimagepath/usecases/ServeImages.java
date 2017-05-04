@@ -1,19 +1,31 @@
 package publicimagepath.usecases;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.text.SimpleDateFormat;
+import java.util.Calendar;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
+import java.util.TimeZone;
+import java.util.UUID;
 import java.util.regex.Pattern;
+
+import javax.imageio.ImageIO;
+import javax.imageio.ImageReader;
+import javax.imageio.stream.ImageInputStream;
 
 import org.apache.commons.io.IOUtils;
 
-import com.mendix.core.CoreException;
 import com.mendix.m2ee.api.IMxRuntimeRequest;
 import com.mendix.m2ee.api.IMxRuntimeResponse;
+import com.mendix.systemwideinterfaces.MendixException;
 import com.mendix.systemwideinterfaces.core.IDataType;
 import com.mendix.systemwideinterfaces.core.IMendixObject;
 import com.mendix.systemwideinterfaces.core.IMendixObjectMember;
@@ -48,7 +60,7 @@ public class ServeImages {
 		this.imageServiceDefinitionParser = imageServiceDefinitionParser;
 	}
 	
-	public void serve() throws IOException, CoreException {
+	public void serve() throws IOException, MendixException {
 		
 		String requestPath = request.getHttpServletRequest().getRequestURI();
 		requestPath = imagesPattern.matcher(requestPath).replaceAll("");
@@ -91,12 +103,43 @@ public class ServeImages {
 					}
 					
 					InputStream imageInputStream = mendixObjectRepository.getImage(imageObject);
-					OutputStream outputStream = response.getOutputStream();
-					IOUtils.copy(imageInputStream, outputStream);
-					imageInputStream.close();
+					ByteArrayOutputStream baos = new ByteArrayOutputStream();
+					IOUtils.copy(imageInputStream, baos);
+					byte[] imageBytes = baos.toByteArray();
+			        ByteArrayInputStream anotherBais = new ByteArrayInputStream(imageBytes);
+			        setHeaders(imageObject, imageBytes, response);
+			        OutputStream outputStream = response.getOutputStream();
+			        IOUtils.copy(anotherBais, outputStream);
+					anotherBais.close();
 					outputStream.close();
 				}
 			}
 		}	
+	}
+	
+	private void setHeaders(IMendixObject imageObject, byte[] imageBytes, IMxRuntimeResponse response) throws MendixException, IOException {
+		
+		ByteArrayInputStream bais = new ByteArrayInputStream(imageBytes);
+		
+		ImageInputStream iis = ImageIO.createImageInputStream(bais);
+		Iterator<ImageReader> imageReaders = ImageIO.getImageReaders(iis);
+		ImageReader reader = (ImageReader) imageReaders.next();
+		String imageFormat = reader.getFormatName();
+		
+        SimpleDateFormat dateFormat = new SimpleDateFormat(
+            "EEE, dd MMM yyyy HH:mm:ss z", Locale.US);
+        dateFormat.setTimeZone(TimeZone.getTimeZone("GMT"));
+        Calendar calendar = Calendar.getInstance();
+        calendar.set(Calendar.YEAR, calendar.get(Calendar.YEAR)+1);
+        Date dateTimeNextYear = calendar.getTime();
+        Date changedDate = mendixObjectEntity.getChangedDate(imageObject);
+        
+        response.getHttpServletResponse().setHeader("Cache-control", "public, max-age=31536000");
+        response.getHttpServletResponse().setHeader("Content-type", "image/" + imageFormat.toLowerCase());
+        response.getHttpServletResponse().setHeader("Expires",  dateFormat.format(dateTimeNextYear));
+        response.getHttpServletResponse().setHeader("Last-modified", dateFormat.format(changedDate));
+        response.getHttpServletResponse().setHeader("Content-length", "" + imageBytes.length);
+        response.getHttpServletResponse().setHeader("ETag", UUID.nameUUIDFromBytes(imageBytes).toString());
+		
 	}
 }

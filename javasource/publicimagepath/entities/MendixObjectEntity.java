@@ -1,6 +1,9 @@
 package publicimagepath.entities;
 
+import java.util.Date;
 import java.util.Map;
+
+import com.mendix.core.CoreException;
 
 //import java.io.ByteArrayInputStream;
 //import java.io.InputStream;
@@ -42,5 +45,9 @@ public class MendixObjectEntity {
 	@SuppressWarnings("unchecked")
 	public <T> void setValue(IMendixObjectMember<T> member, String value) {
 		member.setValue(context, (T) value);
+	}
+	
+	public Date getChangedDate(IMendixObject object) throws CoreException {
+		return object.getChangedDate(context);
 	}
 }
