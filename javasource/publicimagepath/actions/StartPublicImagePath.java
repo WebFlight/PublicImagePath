@@ -11,6 +11,7 @@ package publicimagepath.actions;
 
 import java.util.List;
 import com.mendix.core.Core;
+import com.mendix.logging.ILogNode;
 import com.mendix.systemwideinterfaces.core.IContext;
 import com.mendix.webui.CustomJavaAction;
 import publicimagepath.entities.MendixObjectEntity;
@@ -32,15 +33,23 @@ public class StartPublicImagePath extends CustomJavaAction<java.lang.Boolean>
 	public java.lang.Boolean executeAction() throws Exception
 	{
 		// BEGIN USER CODE
+		ILogNode logger = Core.getLogger("PublicImagePath");
+		
 		MendixObjectRepository mendixObjectRepository = new MendixObjectRepository(getContext());
 		MendixObjectEntity mendixObjectEntity = new MendixObjectEntity(getContext());
-		PublicImagePathLoader publicImagePathLoader = new PublicImagePathLoader(mendixObjectRepository);
+		PublicImagePathLoader publicImagePathLoader = new PublicImagePathLoader(mendixObjectRepository, mendixObjectEntity, logger);
 		ImageServiceDefinitionMatcher imageServiceDefinitionMatcher = new ImageServiceDefinitionMatcher(mendixObjectEntity);
 		ImageServiceDefinitionParser imageServiceDefinitionParser = new ImageServiceDefinitionParser(mendixObjectEntity);
 		
-		
 		List<ImageServiceDefinition> imageServiceDefinitions = publicImagePathLoader.load();
+		
+		if (publicImagePathLoader.validate(imageServiceDefinitions) == false) {
+			logger.error("Errors occured during validation of ImageServiceDefinitions. PublicImagePath could not be initialized.");
+			return false;
+		}
+		
 		Core.addRequestHandler("images/", new PublicImagePathHandler(imageServiceDefinitions, mendixObjectEntity, mendixObjectRepository, imageServiceDefinitionMatcher, imageServiceDefinitionParser));
+		
 		return true;
 		// END USER CODE
 	}

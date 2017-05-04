@@ -90,6 +90,7 @@ public class ServeImages {
 			while(it.hasNext()) {
 				IDataType dataType = it.next();
 				if(dataType.isMendixObject()) {
+					
 					IMendixObject inputObject = mendixObjectRepository.instantiate(dataType.getObjectType());
 					Map<String, ? extends IMendixObjectMember<?>> inputObjectMembers = mendixObjectEntity.getMembers(inputObject);
 					for(String key : inputObjectMembers.keySet()) {
