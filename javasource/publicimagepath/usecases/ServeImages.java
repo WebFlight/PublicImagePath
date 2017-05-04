@@ -5,6 +5,9 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.math.BigInteger;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Date;
@@ -103,21 +106,21 @@ public class ServeImages {
 					}
 					
 					InputStream imageInputStream = mendixObjectRepository.getImage(imageObject);
-					ByteArrayOutputStream baos = new ByteArrayOutputStream();
-					IOUtils.copy(imageInputStream, baos);
-					byte[] imageBytes = baos.toByteArray();
-			        ByteArrayInputStream anotherBais = new ByteArrayInputStream(imageBytes);
+					ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+					IOUtils.copy(imageInputStream, byteArrayOutputStream);
+					byte[] imageBytes = byteArrayOutputStream.toByteArray();
+			        InputStream duplicatedImageInputStream = new ByteArrayInputStream(imageBytes);
 			        setHeaders(imageObject, imageBytes, response);
 			        OutputStream outputStream = response.getOutputStream();
-			        IOUtils.copy(anotherBais, outputStream);
-					anotherBais.close();
+			        IOUtils.copy(duplicatedImageInputStream, outputStream);
+			        duplicatedImageInputStream.close();
 					outputStream.close();
 				}
 			}
 		}	
 	}
 	
-	private void setHeaders(IMendixObject imageObject, byte[] imageBytes, IMxRuntimeResponse response) throws MendixException, IOException {
+	private void setHeaders(IMendixObject imageObject, byte[] imageBytes, IMxRuntimeResponse response) throws MendixException, IOException{
 		
 		ByteArrayInputStream bais = new ByteArrayInputStream(imageBytes);
 		
@@ -139,7 +142,20 @@ public class ServeImages {
         response.getHttpServletResponse().setHeader("Expires",  dateFormat.format(dateTimeNextYear));
         response.getHttpServletResponse().setHeader("Last-modified", dateFormat.format(changedDate));
         response.getHttpServletResponse().setHeader("Content-length", "" + imageBytes.length);
-        response.getHttpServletResponse().setHeader("ETag", UUID.nameUUIDFromBytes(imageBytes).toString());
+        response.getHttpServletResponse().setHeader("ETag", getEtag(imageBytes));
 		
+        iis.close();
+	}
+	
+	private String getEtag(byte[] imageBytes) {
+		try {
+			MessageDigest md = MessageDigest.getInstance("MD5");
+			md.reset();
+	        md.update(imageBytes, 0, imageBytes.length);
+	        BigInteger bigInt = new BigInteger(1,md.digest());
+	        return bigInt.toString(16);
+		} catch (NoSuchAlgorithmException e) {
+			return UUID.nameUUIDFromBytes(imageBytes).toString();
+		}
 	}
 }
