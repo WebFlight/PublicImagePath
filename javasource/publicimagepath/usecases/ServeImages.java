@@ -97,7 +97,14 @@ public class ServeImages {
 					if(parameterMap.get(member.getName()) == null) {
 						continue;
 					}
-					mendixObjectEntity.setValue(inputObject, member.getName(), parameterMap.get(member.getName()));
+					try {
+						mendixObjectEntity.setValue(inputObject, member.getName(), parameterMap.get(member.getName()));
+					} catch (NumberFormatException e) {
+						response.getHttpServletResponse().setStatus(404);
+						response.getOutputStream().write(new String("404 NOT FOUND: Parameter types do not match with input object.").getBytes());
+						response.getOutputStream().close();
+						return;
+					}
 				}
 
 				imageObject = mendixObjectRepository.execute(microflowName, inputObject);
