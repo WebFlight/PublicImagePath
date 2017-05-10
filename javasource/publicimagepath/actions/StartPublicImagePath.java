@@ -15,6 +15,7 @@ import com.mendix.logging.ILogNode;
 import com.mendix.systemwideinterfaces.core.IContext;
 import com.mendix.webui.CustomJavaAction;
 import publicimagepath.entities.MendixObjectEntity;
+import publicimagepath.helpers.IOUtilsWrapper;
 import publicimagepath.helpers.ImageServiceDefinitionMatcher;
 import publicimagepath.helpers.ImageServiceDefinitionParser;
 import publicimagepath.proxies.ImageServiceDefinition;
@@ -40,6 +41,7 @@ public class StartPublicImagePath extends CustomJavaAction<java.lang.Boolean>
 		PublicImagePathLoader publicImagePathLoader = new PublicImagePathLoader(mendixObjectRepository, mendixObjectEntity, logger);
 		ImageServiceDefinitionMatcher imageServiceDefinitionMatcher = new ImageServiceDefinitionMatcher(mendixObjectEntity);
 		ImageServiceDefinitionParser imageServiceDefinitionParser = new ImageServiceDefinitionParser(mendixObjectEntity);
+		IOUtilsWrapper iOUtilsWrapper = new IOUtilsWrapper();
 		
 		List<ImageServiceDefinition> imageServiceDefinitions = publicImagePathLoader.load();
 		
@@ -48,7 +50,13 @@ public class StartPublicImagePath extends CustomJavaAction<java.lang.Boolean>
 			return false;
 		}
 		
-		Core.addRequestHandler("images/", new PublicImagePathHandler(imageServiceDefinitions, mendixObjectEntity, mendixObjectRepository, imageServiceDefinitionMatcher, imageServiceDefinitionParser));
+		Core.addRequestHandler("images/", new PublicImagePathHandler(
+				imageServiceDefinitions,
+				mendixObjectEntity,
+				mendixObjectRepository,
+				imageServiceDefinitionMatcher,
+				imageServiceDefinitionParser,
+				iOUtilsWrapper));
 		
 		return true;
 		// END USER CODE
