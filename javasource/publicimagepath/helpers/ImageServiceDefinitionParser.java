@@ -12,7 +12,8 @@ public class ImageServiceDefinitionParser {
 	
 	private MendixObjectEntity mendixObjectEntity;
 	private Pattern leadingAndTrailingSlashes = Pattern.compile("^/|/$");
-	private Pattern parametersInPath = Pattern.compile("\\{[a-zA-Z0-9_\\.-]*\\}");
+	// Characters allowed in URI according to RFC 3986 Appendix A
+	private Pattern parametersInPath = Pattern.compile("\\{[^/?#]*\\}");
 	private Map<String, String> parameterMap = new HashMap<>();
 	
 	public ImageServiceDefinitionParser(MendixObjectEntity mendixObjectEntity) {
@@ -24,8 +25,8 @@ public class ImageServiceDefinitionParser {
 		String path = mendixObjectEntity.getPath(imageServiceDefinition);
 		path = leadingAndTrailingSlashes.matcher(path).replaceAll("");
 		
-		String imageDefinitionRegex = parametersInPath.matcher(path).replaceAll("(\\[a-zA-Z0-9_\\.-\\]*)");
-		String paramRegex = parametersInPath.matcher(path).replaceAll("(\\\\{[a-zA-Z0-9_\\.-]*\\\\})");
+		String imageDefinitionRegex = parametersInPath.matcher(path).replaceAll("(\\[^/?#]*)");
+		String paramRegex = parametersInPath.matcher(path).replaceAll("(\\\\{[^/?#]*\\\\})");
 		Pattern pattern = Pattern.compile(imageDefinitionRegex);
 		Pattern paramPattern = Pattern.compile(paramRegex);
 		Matcher parMatcher  = paramPattern.matcher(path);

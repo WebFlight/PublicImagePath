@@ -9,8 +9,9 @@ import publicimagepath.proxies.ImageServiceDefinition;
 public class ImageServiceDefinitionMatcher {
 	
 	private MendixObjectEntity mendixObjectEntity;
-	private Pattern leadingAndTrailingSlashes = Pattern.compile("^/|/$"); 
-	private Pattern parametersInPath = Pattern.compile("\\{[a-zA-Z0-9_\\.-]*\\}");
+	private Pattern leadingAndTrailingSlashes = Pattern.compile("^/|/$");
+	// Characters allowed in URI according to RFC 3986 Appendix A
+	private Pattern parametersInPath = Pattern.compile("\\{[^/?#]*\\}");
 	
 	public ImageServiceDefinitionMatcher(MendixObjectEntity mendixObjectEntity) {
 		this.mendixObjectEntity = mendixObjectEntity;
@@ -22,7 +23,7 @@ public class ImageServiceDefinitionMatcher {
 			String path = mendixObjectEntity.getPath(imageServiceDefinition);
 			path = leadingAndTrailingSlashes.matcher(path).replaceAll("");
 			
-			String imageDefinitionRegex = parametersInPath.matcher(path).replaceAll("(\\[a-zA-Z0-9_\\.-\\]*)");
+			String imageDefinitionRegex = parametersInPath.matcher(path).replaceAll("(\\[^/?#\\]*)");
 			Pattern pattern = Pattern.compile(imageDefinitionRegex);
 			if (pattern.matcher(requestPath).matches()) {
 				return imageServiceDefinition;

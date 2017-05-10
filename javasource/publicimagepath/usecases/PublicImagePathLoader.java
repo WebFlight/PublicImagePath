@@ -60,7 +60,12 @@ public class PublicImagePathLoader {
 	
 	private boolean checkPathExists (ImageServiceDefinition imageServiceDefinition) {
 		String path = mendixObjectEntity.getPath(imageServiceDefinition);
-		if (path == null | path.equals("")) {
+		if (path == null) {
+			logger.error("Path for ImageServiceDefinition is not specified.");
+			return false;
+		}
+		
+		if (path.isEmpty()) {
 			logger.error("Path for ImageServiceDefinition is not specified.");
 			return false;
 		}
@@ -95,12 +100,10 @@ public class PublicImagePathLoader {
 		
 		while(it.hasNext()) {
 			IDataType dataType = it.next();
-			if(dataType.isMendixObject()) {
-				IMetaObject metaObject = mendixObjectRepository.getMetaObject(dataType.getObjectType());
-				Collection<? extends IMetaPrimitive> primitives = mendixObjectEntity.getMetaPrimitives(metaObject);
-				for (IMetaPrimitive primitive : primitives) {
-					microflowInputMembers.add(primitive.getName());
-				}
+			IMetaObject metaObject = mendixObjectRepository.getMetaObject(dataType.getObjectType());
+			Collection<? extends IMetaPrimitive> primitives = mendixObjectEntity.getMetaPrimitives(metaObject);
+			for (IMetaPrimitive primitive : primitives) {
+				microflowInputMembers.add(primitive.getName());
 			}
 		}
 		

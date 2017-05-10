@@ -17,14 +17,10 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.TimeZone;
-import java.util.UUID;
 import java.util.regex.Pattern;
 
-import javax.imageio.ImageIO;
 import javax.imageio.ImageReader;
 import javax.imageio.stream.ImageInputStream;
-
-import org.apache.commons.io.IOUtils;
 
 import com.mendix.m2ee.api.IMxRuntimeRequest;
 import com.mendix.m2ee.api.IMxRuntimeResponse;
@@ -34,6 +30,7 @@ import com.mendix.systemwideinterfaces.core.IMendixObject;
 import com.mendix.systemwideinterfaces.core.IMendixObjectMember;
 
 import publicimagepath.entities.MendixObjectEntity;
+import publicimagepath.helpers.IOUtilsWrapper;
 import publicimagepath.helpers.ImageServiceDefinitionMatcher;
 import publicimagepath.helpers.ImageServiceDefinitionParser;
 import publicimagepath.proxies.ImageServiceDefinition;
@@ -48,22 +45,24 @@ public class ServeImages {
 	private MendixObjectRepository mendixObjectRepository;
 	private ImageServiceDefinitionMatcher imageServiceDefinitionMatcher;
 	private ImageServiceDefinitionParser imageServiceDefinitionParser;
+	private IOUtilsWrapper iOUtilsWrapper;
 	private Pattern imagesPattern = Pattern.compile("^/images");
-	private Pattern slashPattern = Pattern.compile("^/|/$"); 
+	private Pattern slashPattern = Pattern.compile("^/|/$");
 
-	public ServeImages(IMxRuntimeRequest request, IMxRuntimeResponse response, String s,
-			List<ImageServiceDefinition> imageServiceDefinitions, MendixObjectEntity imageServiceDefinitionEntity, MendixObjectRepository mendixObjectRepository,
-			ImageServiceDefinitionMatcher imageServiceDefinitionMatcher, ImageServiceDefinitionParser imageServiceDefinitionParser) {
+	public ServeImages(IMxRuntimeRequest request, IMxRuntimeResponse response,
+			List<ImageServiceDefinition> imageServiceDefinitions, MendixObjectEntity mendixObjectEntity, MendixObjectRepository mendixObjectRepository,
+			ImageServiceDefinitionMatcher imageServiceDefinitionMatcher, ImageServiceDefinitionParser imageServiceDefinitionParser, IOUtilsWrapper iOUtilsWrapper) {
 		this.request = request;
 		this.response = response;
 		this.imageServiceDefinitions = imageServiceDefinitions;
-		this.mendixObjectEntity = imageServiceDefinitionEntity;
+		this.mendixObjectEntity = mendixObjectEntity;
 		this.mendixObjectRepository = mendixObjectRepository;
 		this.imageServiceDefinitionMatcher = imageServiceDefinitionMatcher;
 		this.imageServiceDefinitionParser = imageServiceDefinitionParser;
+		this.iOUtilsWrapper = iOUtilsWrapper;
 	}
 
-	public void serve() throws IOException, MendixException {
+	public void serve() throws IOException, MendixException, NoSuchAlgorithmException {
 
 		String requestPath = request.getHttpServletRequest().getRequestURI();
 		requestPath = imagesPattern.matcher(requestPath).replaceAll("");
@@ -103,8 +102,9 @@ public class ServeImages {
 		}
 		
 		if (mfInputParameters.size() == 0) {
-			imageObject = mendixObjectRepository.execute(microflowName, new Object());
+			imageObject = mendixObjectRepository.execute(microflowName, null);
 		}
+		
 		
 		if(imageObject == null) {
 			response.getHttpServletResponse().setStatus(404);
@@ -115,24 +115,25 @@ public class ServeImages {
 		
 		InputStream imageInputStream = mendixObjectRepository.getImage(imageObject);
 		ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
-		IOUtils.copy(imageInputStream, byteArrayOutputStream);
+		iOUtilsWrapper.copy(imageInputStream, byteArrayOutputStream);
 		byte[] imageBytes = byteArrayOutputStream.toByteArray();
-		InputStream duplicatedImageInputStream = new ByteArrayInputStream(imageBytes);
+		InputStream duplicatedImageInputStream = iOUtilsWrapper.createByteArrayInputStream(imageBytes);
 		setHeaders(imageObject, imageBytes, response);
 		OutputStream outputStream = response.getOutputStream();
-		IOUtils.copy(duplicatedImageInputStream, outputStream);
+		iOUtilsWrapper.copy(duplicatedImageInputStream, outputStream);
 		duplicatedImageInputStream.close();
 		outputStream.close();
 	}	
 
 
-	private void setHeaders(IMendixObject imageObject, byte[] imageBytes, IMxRuntimeResponse response) throws MendixException, IOException{
+	private void setHeaders(IMendixObject imageObject, byte[] imageBytes, IMxRuntimeResponse response) throws MendixException, IOException, NoSuchAlgorithmException{
 
-		ByteArrayInputStream bais = new ByteArrayInputStream(imageBytes);
+		ByteArrayInputStream bais = iOUtilsWrapper.createByteArrayInputStream(imageBytes);
 
-		ImageInputStream iis = ImageIO.createImageInputStream(bais);
-		Iterator<ImageReader> imageReaders = ImageIO.getImageReaders(iis);
-		ImageReader reader = (ImageReader) imageReaders.next();
+		ImageInputStream iis = iOUtilsWrapper.createImageInputStream(bais);
+
+		Iterator<ImageReader> imageReaders = iOUtilsWrapper.getImageReaders(iis);
+		ImageReader reader = imageReaders.next();
 		String imageFormat = reader.getFormatName();
 
 		SimpleDateFormat dateFormat = new SimpleDateFormat(
@@ -153,15 +154,11 @@ public class ServeImages {
 		iis.close();
 	}
 
-	private String getEtag(byte[] imageBytes) {
-		try {
-			MessageDigest md = MessageDigest.getInstance("MD5");
-			md.reset();
-			md.update(imageBytes, 0, imageBytes.length);
-			BigInteger bigInt = new BigInteger(1,md.digest());
-			return bigInt.toString(16);
-		} catch (NoSuchAlgorithmException e) {
-			return UUID.nameUUIDFromBytes(imageBytes).toString();
-		}
+	private String getEtag(byte[] imageBytes) throws NoSuchAlgorithmException {
+		MessageDigest md = MessageDigest.getInstance("MD5");
+		md.reset();
+		md.update(imageBytes, 0, imageBytes.length);
+		BigInteger bigInt = new BigInteger(1,md.digest());
+		return bigInt.toString(16);
 	}
 }
