@@ -94,6 +94,9 @@ public class ServeImages {
 				Map<String, ? extends IMendixObjectMember<?>> inputObjectMembers = mendixObjectEntity.getMembers(inputObject);
 				for(String key : inputObjectMembers.keySet()) {
 					IMendixObjectMember<?> member = inputObjectMembers.get(key);
+					if(parameterMap.get(member.getName()) == null) {
+						continue;
+					}
 					mendixObjectEntity.setValue(inputObject, member.getName(), parameterMap.get(member.getName()));
 				}
 

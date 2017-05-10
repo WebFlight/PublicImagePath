@@ -226,8 +226,78 @@ public class ServeImagesTest {
 		verify(httpServletResponse, times(1)).setHeader(eq("ETag"), any(String.class));
 	}
 	
+	@Test
+	public void testServeWithParameterNotSet () throws Exception {
+		List<ImageServiceDefinition> imageServiceDefinitions = new ArrayList<>();
+		imageServiceDefinitions.add(imageServiceDefinition);
+		String microflowName = "IVK_TestMicroflow";
+		String parameterIdValue = "1";
+		String requestPath = "testentities/" + parameterIdValue;
+		String parameterId = "Id";
+		String parameterName = "Name";	
+		
+		HashMap<String, String> parameterMap = new HashMap<>();
+		parameterMap.put(parameterId, parameterIdValue);
+		
+		HashMap<String, IDataType> microflowParameters = new HashMap<>();
+		microflowParameters.put("InputParameters", iDataType);
+		
+		Map<String, IMendixObjectMember<?>> inputObjectMembers = new HashMap<>();
+		inputObjectMembers.put(parameterId, inputMemberId);
+		inputObjectMembers.put(parameterName, inputMemberName);
+		
+		when(iDataType.getObjectType()).thenReturn("InputParameters");
+		when(mendixObjectRepository.getMicroflowInputParameters(microflowName)).thenReturn(microflowParameters);
+		when(imageServiceDefinitionParser.getParameters(imageServiceDefinition, requestPath)).thenReturn(parameterMap);
+		when(request.getHttpServletRequest()).thenReturn(httpServletRequest);
+		when(response.getHttpServletResponse()).thenReturn(httpServletResponse);
+		when(httpServletRequest.getRequestURI()).thenReturn(requestPath);
+		when(mendixObjectEntity.getPath(imageServiceDefinition)).thenReturn("/testentities/{" + parameterId);
+		when(response.getOutputStream()).thenReturn(outputStream);
+		when(imageServiceDefinitionMatcher.find(imageServiceDefinitions, requestPath)).thenReturn(imageServiceDefinition);
+		when(mendixObjectEntity.getMicroflowName(imageServiceDefinition)).thenReturn(microflowName);
+		when(mendixObjectRepository.execute(microflowName, inputObject)).thenReturn(imageObject);
+		when(mendixObjectRepository.instantiate("InputParameters")).thenReturn(inputObject);
+		when(mendixObjectEntity.getMembers(inputObject)).thenReturn(inputObjectMembers);
+		when(byteArrayOutputStream.toByteArray()).thenReturn(imageBytes);
+		when(inputMemberId.getName()).thenReturn(parameterId);
+		when(inputMemberName.getName()).thenReturn(parameterName);
+
+		when(iOUtilsWrapper.createImageInputStream(byteArrayInputStream)).thenReturn(imageInputStream);
+		when(iOUtilsWrapper.createByteArrayInputStream(any(byte[].class))).thenReturn(byteArrayInputStream);
+		when(iOUtilsWrapper.getImageReaders(imageInputStream)).thenReturn(imageReaders);
+		when(imageReaders.next()).thenReturn(imageReader);
+		
+		when(response.getHttpServletResponse()).thenReturn(httpServletResponse);
+		when(imageReader.getFormatName()).thenReturn("JPEG");
 	
-	
+		Date changedDate = new Date();
+		when(mendixObjectEntity.getChangedDate(imageObject)).thenReturn(changedDate);
+		
+		SimpleDateFormat dateFormat = new SimpleDateFormat(
+				"EEE, dd MMM yyyy HH:mm:ss z", Locale.US);
+		dateFormat.setTimeZone(TimeZone.getTimeZone("GMT"));
+		Calendar calendar = Calendar.getInstance();
+		calendar.set(Calendar.YEAR, calendar.get(Calendar.YEAR)+1);
+		Date dateTimeNextYear = calendar.getTime();
+		
+		
+		ServeImages serveImages = new ServeImages (request, response, imageServiceDefinitions, mendixObjectEntity, mendixObjectRepository,
+				imageServiceDefinitionMatcher, imageServiceDefinitionParser, iOUtilsWrapper);
+		serveImages.serve();
+		
+		verify(mendixObjectRepository, times(1)).execute(microflowName, inputObject);
+		verify(mendixObjectEntity, times(1)).setValue(inputObject, parameterId, parameterIdValue);
+		verify(iOUtilsWrapper, times(1)).copy(byteArrayInputStream, outputStream);
+		verify(outputStream, times(1)).close();
+		verify(httpServletResponse, times(6)).setHeader(any(String.class), any(String.class));
+		verify(httpServletResponse, times(1)).setHeader("Cache-control", "public, max-age=31536000");
+		verify(httpServletResponse, times(1)).setHeader("Content-type", "image/jpeg");
+		verify(httpServletResponse, times(1)).setHeader("Expires", dateFormat.format(dateTimeNextYear));
+		verify(httpServletResponse, times(1)).setHeader("Last-modified", dateFormat.format(changedDate));
+		verify(httpServletResponse, times(1)).setHeader("Content-length", "0");
+		verify(httpServletResponse, times(1)).setHeader(eq("ETag"), any(String.class));
+	}	
 	
 	@Test
 	public void testServeNoImageFound () throws IOException, MendixException, NoSuchAlgorithmException {
