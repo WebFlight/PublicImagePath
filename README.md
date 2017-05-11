@@ -10,7 +10,7 @@ Welcome to the Mendix *PublicImagePath* module. This module makes it possible to
 * Expires
 * Last-Modified
 
-This enables the use of Content Delivery Networks for image distribution that do not accept octec-stream MIME-types. In addition, user experience will be improved when browsers load images from cache when correct headers are returned.
+This enables the use of Content Delivery Networks for image distribution that do not accept octet-stream MIME-types. In addition, user experience will be improved when browsers load images from cache when correct headers are returned.
 
 # Table of Contents
 
@@ -55,7 +55,7 @@ The entity that is used for parameter mapping for the image expose microflow:
 
 * For contributions: fork this repository, make changes, fix/add unit tests in dynamicchangeobject.tests package and issue pull request.
 * Security is not implemented yet, exposed images are publicly available.
-* Filenames should be URL-safe to prevent issues with URL encoding.
+* Path parameters should be URL-safe to prevent issues with URL encoding.
 
 
 [1]: https://github.com/WebFlight/PublicImagePath/blob/master/docs/PublicImagePath.PNG
