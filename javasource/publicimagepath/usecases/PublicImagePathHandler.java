@@ -6,25 +6,44 @@ import com.mendix.externalinterface.connector.RequestHandler;
 import com.mendix.m2ee.api.IMxRuntimeRequest;
 import com.mendix.m2ee.api.IMxRuntimeResponse;
 
-import publicimagepath.entities.ImageServiceDefinitionEntity;
+import publicimagepath.entities.MendixObjectEntity;
+import publicimagepath.helpers.IOUtilsWrapper;
+import publicimagepath.helpers.ImageServiceDefinitionMatcher;
+import publicimagepath.helpers.ImageServiceDefinitionParser;
 import publicimagepath.proxies.ImageServiceDefinition;
-import publicimagepath.repositories.MendixImageRepository;
+import publicimagepath.repositories.MendixObjectRepository;
 
 public class PublicImagePathHandler extends RequestHandler{
 	
 	private List<ImageServiceDefinition> imageServiceDefinitions;
-	private ImageServiceDefinitionEntity imageServiceDefinitionEntity;
-	private MendixImageRepository mendixImageRepository;
+	private MendixObjectEntity mendixObjectEntity;
+	private MendixObjectRepository mendixObjectRepository;
+	private ImageServiceDefinitionMatcher imageServiceDefinitionMatcher;
+	private ImageServiceDefinitionParser imageServiceDefinitionParser;
+	private IOUtilsWrapper iOUtilsWrapper;
 	
-	public PublicImagePathHandler(List<ImageServiceDefinition> imageServiceDefinitions, ImageServiceDefinitionEntity imageServiceDefinitionEntity, MendixImageRepository mendixImageRepository){
+	public PublicImagePathHandler(List<ImageServiceDefinition> imageServiceDefinitions, MendixObjectEntity mendixObjectEntity, MendixObjectRepository mendixObjectRepository,
+			ImageServiceDefinitionMatcher imageServiceDefinitionMatcher, ImageServiceDefinitionParser imageServiceDefinitionParser, IOUtilsWrapper iOUtilsWrapper){
 		this.imageServiceDefinitions = imageServiceDefinitions;
-		this.imageServiceDefinitionEntity = imageServiceDefinitionEntity;
-		this.mendixImageRepository = mendixImageRepository;
+		this.mendixObjectEntity = mendixObjectEntity;
+		this.mendixObjectRepository = mendixObjectRepository;
+		this.imageServiceDefinitionMatcher = imageServiceDefinitionMatcher;
+		this.imageServiceDefinitionParser = imageServiceDefinitionParser;
+		this.iOUtilsWrapper = iOUtilsWrapper;
 	}
 
 	@Override
 	protected void processRequest(IMxRuntimeRequest request, IMxRuntimeResponse response, String path) throws Exception {
-		ServeImages serveImages = new ServeImages(request, response, path, imageServiceDefinitions, imageServiceDefinitionEntity, mendixImageRepository);
+		ServeImages serveImages = new ServeImages(
+				request, 
+				response,  
+				imageServiceDefinitions, 
+				mendixObjectEntity, 
+				mendixObjectRepository,
+				imageServiceDefinitionMatcher, 
+				imageServiceDefinitionParser,
+				iOUtilsWrapper
+				);
 		serveImages.serve();
 	}
 
